@@ -1,87 +1,72 @@
-import {render, screen, waitFor} from '@testing-library/react';
+import {render, screen} from '@testing-library/react';
 
-import {Home} from '../routes/_index';
-import '@testing-library/jest-dom';
-import 'jest-fetch-mock';
-import userEvent from '@testing-library/user-event';
+import Home, {loader} from '~/routes/($locale)._index';
 
-describe('Home', () => {
-  const fakeUsers = [
-    {id: 1, name: 'John Doe'},
-    {id: 2, name: 'Kevin'},
-  ];
+jest.mock('@remix-run/react', () => ({
+  useLoaderData: () => ({
+    shop: {
+      name: 'Title',
+      description: 'Description',
+    },
+  }),
+}));
 
+describe('loader home', () => {
   beforeEach(() => {
-    fetchMock.resetMocks();
+    jest.clearAllMocks();
   });
 
-  test('renders Home component with API success', async () => {
-    fetchMock.mockResponseOnce(JSON.stringify(fakeUsers), {
-      status: 200,
-    });
-
+  it('render home with name and description of the shop', async () => {
     render(<Home />);
 
-    expect(screen.getByRole('heading')).toHaveTextContent('List of Users');
-
-    expect(await screen.findByText('John Doe')).toBeInTheDocument();
-
-    expect(screen.queryByText('No users found')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading')).toHaveTextContent('Title');
+    expect(screen.getByText('Description')).toBeInTheDocument();
   });
 
-  test('renders Home component with API failure', async () => {
-    fetchMock.mockReject(() => Promise.reject('API is down'));
+  it('loader home should throw 404 error', async () => {
+    const response = await loader({
+      params: {
+        locale: 'EN-CA',
+      },
+      context: {
+        storefront: {
+          i18n: {
+            language: 'EN',
+            country: 'US',
+          },
+        },
+      },
+    } as any).catch((error) => error);
 
-    render(<Home />);
-
-    expect(
-      await screen.findByText('Something went wrong!'),
-    ).toBeInTheDocument();
-    expect(await screen.findByText('No users found')).toBeInTheDocument();
+    expect(response.status).toBe(404);
   });
 
-  test('button remove user from list', async () => {
-    fetchMock.mockResponseOnce(JSON.stringify(fakeUsers), {
-      status: 200,
-    });
+  it('loader return data shop with name and description', async () => {
+    const response = await loader({
+      params: {
+        locale: 'EN-US',
+      },
+      context: {
+        storefront: {
+          query: async () => ({
+            shop: {
+              name: 'Title',
+              description: 'Description',
+            },
+          }),
+          i18n: {
+            language: 'EN',
+            country: 'US',
+          },
+        },
+      },
+    } as any);
 
-    render(<Home />);
-
-    expect(await screen.findByText('John Doe')).toBeInTheDocument();
-    expect(await screen.findByText('Kevin')).toBeInTheDocument();
-
-    const buttonRemoveUser = await screen.findByTestId('remove-user-1');
-
-    expect(buttonRemoveUser).toBeInTheDocument();
-
-    await userEvent.click(buttonRemoveUser);
-
-    await waitFor(() => {
-      expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
-    });
-  });
-
-  test('button to insert a new user in list', async () => {
-    fetchMock.mockResponseOnce(JSON.stringify(fakeUsers), {
-      status: 200,
-    });
-
-    render(<Home />);
-
-    expect(await screen.findByText('John Doe')).toBeInTheDocument();
-    const inputName = await screen.findByTestId('input-name');
-
-    expect(inputName).toBeInTheDocument();
-
-    const buttonAddUser = await screen.findByTestId('add-user-button');
-
-    expect(buttonAddUser).toBeInTheDocument();
-
-    await userEvent.type(inputName, 'New User');
-    await userEvent.click(buttonAddUser);
-
-    await waitFor(() => {
-      expect(screen.getByText('New User')).toBeInTheDocument();
+    expect(response.data).toEqual({
+      shop: {
+        name: 'Title',
+        description: 'Description',
+      },
     });
   });
 });

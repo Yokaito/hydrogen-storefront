@@ -9,6 +9,9 @@ module.exports = {
     '!**/jest.config.js',
     '!**/remix.config.js',
     '!**/server.ts',
+    '!**/app/entry.server.tsx',
+    '!**/app/entry.client.tsx',
+    '!**/app/root.tsx',
   ],
   moduleNameMapper: {
     // Handle absolute imports in Remix
@@ -29,5 +32,6 @@ module.exports = {
     '^(?!.*\\.(js|jsx|mjs|cjs|ts|tsx|css|json)$)':
       'jest-preview/transforms/file',
   },
-  transformIgnorePatterns: ['/node_modules/'],
+  // ignore defer imports
+  transformIgnorePatterns: [],
 };
